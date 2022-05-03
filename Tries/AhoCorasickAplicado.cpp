@@ -1,32 +1,65 @@
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <stdbool.h>
 using namespace std;
-#include <bits/stdc++.h>
 
-const int MAXS = 1000;
-const int MAXC = 26;
+#define MAXS 1000001
+#define SIZESTRING 10001
 
-unsigned long long out[MAXS];
+int pd[MAXS];
 int f[MAXS];
+int g[MAXS][26];
+int aQueue[MAXS];
 
-int g[MAXS][MAXC];
+int out[MAXS];
+int maxR = 0;
 
+int n;
 
-int buildAho(string arr[], int k)
+typedef struct uString {
+    char string[SIZESTRING];
+} stringX;
+
+stringX arr[10001];
+
+int compara(const void *a, const void *b)
 {
-    for(int i = 0;i < MAXS;i++)
-        out[i] = 0;
+    return strlen(((stringX *)a)->string) > strlen(((stringX *)b)->string);
+}
 
-    memset(g, -1, sizeof g);
+int main()
+{
+    int n;
+
+    while(scanf("%d", &n), n) {
+        for(int i = 0;i < n;i++)
+            scanf("%s", arr[i].string);
+
+        qsort(arr, n, sizeof(stringX), compara);
+
+        maxR = 0;
+
+        for(int i = 0;i < MAXS;i++) {
+            out[i] = pd[i] = 0;
+            f[i] = -1;
+
+            for(int j = 0;j < 26;j++) {
+                g[i][j] = -1;
+            }
+        }
+
 
     int states = 1;
 
-    for (int i = 0; i < k; ++i)
+    for (int i = 0; i < n; ++i)
     {
-        const string &word = arr[i];
+        const stringX word = arr[i];
         int currentState = 0;
 
-        for (int j = 0; j < word.size(); ++j)
+        for (int j = 0; word.string[j] != 0; ++j)
         {
-            int ch = word[j] - 'a';
+            int ch = word.string[j] - 'a';
 
             if (g[currentState][ch] == -1)
                 g[currentState][ch] = states++;
@@ -34,32 +67,34 @@ int buildAho(string arr[], int k)
             currentState = g[currentState][ch];
         }
 
-        out[currentState] |= (1 << i);
+        out[currentState] = 1;
+
     }
 
-    for (int ch = 0; ch < MAXC; ++ch)
+    for (int ch = 0; ch < 26; ++ch)
         if (g[0][ch] == -1)
             g[0][ch] = 0;
 
-    memset(f, -1, sizeof f);
 
-    int aQueue[MAXS];
-    int base = 0;
 
-    for (int ch = 0; ch < MAXC; ++ch)
+    int ini = 0, fim = 0;
+
+    for (int ch = 0; ch < 26; ++ch)
     {
         if (g[0][ch] != 0)
         {
             f[g[0][ch]] = 0;
-            aQueue[base++] = g[0][ch];
+            pd[g[0][ch]] = pd[0] + out[g[0][ch]];
+            aQueue[fim++] = g[0][ch];
         }
     }
 
-    while (base)
-    {
-        int state = aQueue[--base];
 
-        for (int ch = 0; ch < MAXC; ++ch)
+    while (fim > ini)
+    {
+        int state = aQueue[ini++];
+
+        for (int ch = 0; ch < 26; ++ch)
         {
             if (g[state][ch] != -1)
             {
@@ -69,91 +104,19 @@ int buildAho(string arr[], int k)
                       failure = f[failure];
 
                 failure = g[failure][ch];
+
+                pd[g[state][ch]] = (pd[state] < pd[failure] ? pd[failure] : pd[state]) + out[g[state][ch]];
+
+                maxR = maxR < pd[g[state][ch]] ? pd[g[state][ch]] : maxR;
+
                 f[g[state][ch]] = failure;
 
-                out[g[state][ch]] |= out[failure];
-
-                aQueue[base++] = g[state][ch];
+                aQueue[fim++] = g[state][ch];
             }
         }
     }
 
-    return states;
-}
-
-int findNextState(int currentState, char nextInput)
-{
-    int answer = currentState;
-    int ch = nextInput - 'a';
-
-    while (g[answer][ch] == -1)
-        answer = f[answer];
-
-    return g[answer][ch];
-}
-
-void searchWords(string arr[], int k)
-{
-    int pd[k];
-
-    memset(pd, 0, sizeof pd);
-
-	buildAho(arr, k);
-
-	int maxGlobal = 0;
-	for (int i = 0; i < k; ++i)
-	{
-        int currentState = 0;
-
-        unsigned long long binary = 0;
-		for(int j = 0;j < arr[i].size();j++) {
-            currentState = findNextState(currentState, arr[i][j]);
-
-            binary |= out[currentState];
-		}
-
-		int maxAux = 0;
-
-		for(int j = 0;binary != 1;j++) {
-
-            if(binary % 2 != 0)
-                maxAux = max(maxAux, pd[j]);
-
-            binary /= 2;
-		}
-
-		pd[i] = maxAux + 1;
-
-
-		maxGlobal = max(pd[i], maxGlobal);
-
-	}
-
-	printf("%d\n", maxGlobal);
-}
-
-bool compara(string a, string b)
-{
-    if(a.size() < b.size())
-        return true;
-
-    return false;
-}
-// Driver program to test above
-int main()
-{
-    int n;
-
-    while(scanf("%d", &n) && n != 0) {
-        string arr[n];
-
-        for(int i = 0;i < n;i++) {
-            cin >> arr[i];
-        }
-
-        sort(arr, arr + n, compara);
-
-        searchWords(arr, n);
+        printf("%d\n", maxR);
     }
 	return 0;
 }
